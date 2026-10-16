@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Opus 5.5 Random Bits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@600;700&family=JetBrains+Mono:wght@400;600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: single reading column, data figures break slightly wider; bits drawn as square cells */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --fg: #16191f; --muted: #5d6573; --line: #dde1e7;
+  --llm: #2f4fd6; --llm-soft: #dfe5fb; --rand: #8a8f99; --rand-soft: #e8eaee; --warn: #c2410c;
+  --bit0: #16191f; --bit1: #e3e6eb;
+  --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12151b; --surface: #1a1e26; --fg: #e8ebf0; --muted: #9aa3b2; --line: #2b313c;
+  --llm: #8ea4ff; --llm-soft: #26305a; --rand: #9aa0aa; --rand-soft: #2a2f38; --warn: #fb923c;
+  --bit0: #e8ebf0; --bit1: #2a303b; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12151b; --surface: #1a1e26; --fg: #e8ebf0; --muted: #9aa3b2; --line: #2b313c;
+  --llm: #8ea4ff; --llm-soft: #26305a; --rand: #9aa0aa; --rand-soft: #2a2f38; --warn: #fb923c;
+  --bit0: #e8ebf0; --bit1: #2a303b; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.55 var(--body); padding-inline: 16px; padding-block: 40px 64px }
+main { max-width: 760px; margin: 0 auto; display: grid; gap: 40px }
+header { display: grid; gap: 12px }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+h1 { font: 700 clamp(30px, 6vw, 44px)/1.08 var(--display); margin: 0; text-wrap: balance; letter-spacing: -.01em }
+h2 { font: 600 21px/1.25 var(--display); margin: 0; text-wrap: balance }
+p { margin: 0; max-width: 65ch }
+.lede { font-size: 19px; color: var(--muted) }
+section { display: grid; gap: 14px; min-width: 0 }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; display: grid; gap: 4px; min-width: 0 }
+.stat b { font: 700 28px/1.1 var(--display); font-variant-numeric: tabular-nums }
+.stat b.llm { color: var(--llm) }
+.stat span { font-size: 14px; color: var(--muted) }
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 12px; min-width: 0 }
+figcaption { font-size: 14px; color: var(--muted) }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--muted) }
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 6px; vertical-align: -1px }
+.scroll { overflow-x: auto }
+svg text { fill: var(--muted); font: 12px var(--mono) }
+.bits { display: grid; grid-template-columns: repeat(50, 1fr); gap: 1px; max-width: 100% }
+.bits span { aspect-ratio: 1; background: var(--bit1) }
+.bits span.z { background: var(--bit0) }
+.bits span.hit { background: var(--warn) }
+.row-label { font: 600 13px var(--mono); color: var(--fg); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap }
+.row-label em { font-style: normal; color: var(--muted); font-weight: 400 }
+code, .mono { font-family: var(--mono); font-size: .9em }
+footer { font-size: 14px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 8px }
+
+main { max-width: 680px; gap: 32px }
+h1 { font-size: clamp(26px, 5vw, 36px) }
+.issue { display: grid; gap: 12px }
+.issue h2 { display: flex; gap: 10px; align-items: baseline }
+.issue h2 .eyebrow { flex: none }
+.lines { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px }
+.lines div { border-radius: 4px; padding: 5px 0 4px; text-align: center; font: 600 12px/1.15 var(--mono); border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-variant-numeric: tabular-nums }
+.lines div small { display: block; font-size: 10px; font-weight: 400; min-height: 1.15em }
+.lines div.first { border-color: var(--llm); color: var(--llm) }
+.lines div.copy { background: var(--llm); border-color: var(--llm); color: var(--surface) }
+.lines div.copy small { color: var(--surface) }
+.chunk { font: 13px/1.6 var(--mono); word-break: break-all; background: var(--llm-soft); border-radius: 4px; padding: 10px 12px; color: var(--fg) }
+
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Experiment · 100 × 300 random bits from Claude Opus 5.5</div>
+    <h1>Opus 5.5 can't write random bits</h1>
+    <p class="lede">Random 300-bit sequences contain 8 zeroes in a row 44.2% of the time. In the model's 87 valid lines it happened 0 times (expected 38.5 ± 4.6, p ≈ 10<sup>−22</sup>). Two problems explain it.</p>
+  </header>
+
+  <section class="issue">
+    <h2><span class="eyebrow">Issue 1</span>It switches between 0 and 1 too often</h2>
+    <p>The model flips to the other bit on 69% of steps instead of 50%, so runs are cut short: the longest run of zeroes per line averages 2.45, against about 7.7 for random bits.</p>
+    <figure>
+      <div class="row-label">Opus 5.5, line 5 <em>switches 67.6% · longest zero run 2</em></div>
+      <div class="bits" id="llm-bits" role="img" aria-label="Opus 5.5 line 5 drawn as 300 cells, dark for 0"></div>
+      <div class="row-label">Random <em>switches 49.8% · longest zero run 8 (orange)</em></div>
+      <div class="bits" id="rand-bits" role="img" aria-label="A random 300-bit line drawn as 300 cells, dark for 0"></div>
+    </figure>
+
+    <figure>
+      <div class="legend"><span><i style="background:var(--llm)"></i>Opus 5.5 (87 lines)</span><span><i style="background:var(--rand)"></i>Random (exact: 2<sup>−L</sup>)</span></div>
+      <div class="scroll"><svg id="runs" viewBox="0 0 680 250" width="100%" role="img" aria-label="Share of zero runs by length"></svg></div>
+      <figcaption>Share of all zero runs by length. 99.2% of the model's runs are 1 or 2 zeroes long; for random bits a quarter are 3 or longer.</figcaption>
+    </figure>
+    <figure>
+      <div class="scroll"><svg id="blocks" viewBox="0 0 680 420" width="100%" role="img" aria-label="4-bit block frequency relative to random"></svg></div>
+      <figcaption>Each 4-bit block's count divided by the random expectation (≈408). Alternating blocks appear about twice as often as chance; <span class="mono">0000</span> appears once in 6,525 blocks.</figcaption>
+    </figure>
+  </section>
+
+  <section class="issue">
+    <h2><span class="eyebrow">Issue 2</span>It repeats its own lines</h2>
+    <p>After the first few lines, the model mostly rewrote earlier ones shifted by a bit or two. 82 of 87 lines share a 40-bit stretch with another line, and the 87 lines hold only about 38 distinct sequences.</p>
+    <figure>
+      <div class="row-label">Line 20</div>
+      <div class="bits" id="l20" role="img" aria-label="Line 20 drawn as 300 cells"></div>
+      <div class="row-label">Line 43 <em>298 of 300 bits identical · differences in orange</em></div>
+      <div class="bits" id="l43" role="img" aria-label="Line 43 drawn as 300 cells, differences marked"></div>
+    </figure>
+
+    <figure>
+      <div class="legend"><span><i style="background:var(--surface);border:1px solid var(--line)"></i>Unique line</span><span><i style="background:var(--surface);border:1px solid var(--llm)"></i>First line of a group</span><span><i style="background:var(--llm)"></i>Near-copy of an earlier line</span></div>
+      <div class="lines" id="grid"></div>
+      <figcaption>All 87 lines in the order written; groups A–R share at least 250 bits. The first copy appears at line 15, and 28 of the last 30 lines are copies.</figcaption>
+    </figure>
+    <figure>
+      <div class="scroll"><svg id="zip" viewBox="0 0 680 200" width="100%" role="img" aria-label="Compressed size by section of output"></svg></div>
+      <figcaption>Compressed size (zlib) as a share of the original text; lower means more repetitive. Random bits compress to 16.4%, the model's later lines to about 6%.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>The prompt</h2>
+    <p>Everything above comes from this single prompt, sent once to a fresh Opus 5.5 agent with no earlier conversation. The agent wrote all lines in one file write and used no other tools.</p>
+    <blockquote class="chunk" style="margin:0;word-break:normal;white-space:pre-wrap">Generate 100 independent, uniformly random bit sequences, each exactly 300 characters long, using only the characters 0 and 1. One sequence per line, nothing else: no numbering, no spaces, no commentary.
+
+You must produce the bits yourself, directly. Do NOT use Bash, Python, any random number generator, or any code or tool to create or check them. Write all 100 lines in a single Write tool call to this file:
+
+llm_sequences.txt
+
+Do not read or edit any other file. When done, reply only with "done".</blockquote>
+    <p style="font-size:14px;color:var(--muted)">The original prompt gave a full local path; it is shortened here to the file name.</p>
+    <p>The agent's full reply: “done (Note: as instructed, I didn't check line lengths or bit balance with any tool. Many later lines fell into repeated patterns.)”</p>
+  </section>
+
+  <footer>
+    <p>One request to a fresh Opus 5.5 agent in Claude Code, bits written directly without code. It returned 89 lines; 87 had exactly 300 bits. Analysis: <span class="mono">run_probability.py --llm-file llm_sequences.txt</span>.</p>
+  </footer>
+</main>
+<script>
+const D = {"cells": [{"n": 1, "g": "", "s": "unique"}, {"n": 2, "g": "", "s": "unique"}, {"n": 3, "g": "", "s": "unique"}, {"n": 4, "g": "A", "s": "first"}, {"n": 5, "g": "", "s": "unique"}, {"n": 6, "g": "", "s": "unique"}, {"n": 7, "g": "", "s": "unique"}, {"n": 8, "g": "B", "s": "first"}, {"n": 9, "g": "C", "s": "first"}, {"n": 10, "g": "", "s": "unique"}, {"n": 11, "g": "", "s": "unique"}, {"n": 12, "g": "D", "s": "first"}, {"n": 13, "g": "", "s": "unique"}, {"n": 14, "g": "", "s": "unique"}, {"n": 15, "g": "D", "s": "copy"}, {"n": 16, "g": "E", "s": "first"}, {"n": 17, "g": "", "s": "unique"}, {"n": 18, "g": "B", "s": "copy"}, {"n": 19, "g": "F", "s": "first"}, {"n": 20, "g": "G", "s": "first"}, {"n": 21, "g": "D", "s": "copy"}, {"n": 22, "g": "H", "s": "first"}, {"n": 23, "g": "", "s": "unique"}, {"n": 24, "g": "C", "s": "copy"}, {"n": 25, "g": "E", "s": "copy"}, {"n": 26, "g": "E", "s": "copy"}, {"n": 27, "g": "I", "s": "first"}, {"n": 28, "g": "J", "s": "first"}, {"n": 29, "g": "", "s": "unique"}, {"n": 30, "g": "J", "s": "copy"}, {"n": 31, "g": "", "s": "unique"}, {"n": 32, "g": "K", "s": "first"}, {"n": 33, "g": "", "s": "unique"}, {"n": 34, "g": "L", "s": "first"}, {"n": 35, "g": "M", "s": "first"}, {"n": 36, "g": "M", "s": "copy"}, {"n": 37, "g": "E", "s": "copy"}, {"n": 38, "g": "", "s": "unique"}, {"n": 39, "g": "L", "s": "copy"}, {"n": 40, "g": "J", "s": "copy"}, {"n": 41, "g": "A", "s": "copy"}, {"n": 42, "g": "", "s": "unique"}, {"n": 43, "g": "G", "s": "copy"}, {"n": 44, "g": "D", "s": "copy"}, {"n": 45, "g": "N", "s": "first"}, {"n": 46, "g": "O", "s": "first"}, {"n": 47, "g": "K", "s": "copy"}, {"n": 48, "g": "P", "s": "first"}, {"n": 49, "g": "D", "s": "copy"}, {"n": 50, "g": "J", "s": "copy"}, {"n": 51, "g": "J", "s": "copy"}, {"n": 52, "g": "", "s": "unique"}, {"n": 53, "g": "B", "s": "copy"}, {"n": 54, "g": "", "s": "unique"}, {"n": 55, "g": "C", "s": "copy"}, {"n": 56, "g": "I", "s": "copy"}, {"n": 57, "g": "", "s": "unique"}, {"n": 58, "g": "M", "s": "copy"}, {"n": 59, "g": "M", "s": "copy"}, {"n": 60, "g": "E", "s": "copy"}, {"n": 61, "g": "M", "s": "copy"}, {"n": 62, "g": "E", "s": "copy"}, {"n": 63, "g": "N", "s": "copy"}, {"n": 64, "g": "J", "s": "copy"}, {"n": 65, "g": "H", "s": "copy"}, {"n": 66, "g": "Q", "s": "first"}, {"n": 67, "g": "Q", "s": "copy"}, {"n": 68, "g": "M", "s": "copy"}, {"n": 69, "g": "R", "s": "first"}, {"n": 70, "g": "D", "s": "copy"}, {"n": 71, "g": "G", "s": "copy"}, {"n": 72, "g": "M", "s": "copy"}, {"n": 73, "g": "E", "s": "copy"}, {"n": 74, "g": "O", "s": "copy"}, {"n": 75, "g": "F", "s": "copy"}, {"n": 76, "g": "J", "s": "copy"}, {"n": 77, "g": "E", "s": "copy"}, {"n": 78, "g": "P", "s": "copy"}, {"n": 79, "g": "J", "s": "copy"}, {"n": 80, "g": "R", "s": "copy"}, {"n": 81, "g": "L", "s": "copy"}, {"n": 82, "g": "G", "s": "copy"}, {"n": 83, "g": "E", "s": "copy"}, {"n": 84, "g": "A", "s": "copy"}, {"n": 85, "g": "O", "s": "copy"}, {"n": 86, "g": "J", "s": "copy"}, {"n": 87, "g": "L", "s": "copy"}], "rand": "001000110000000101011100111010110011101000010000101100110101000100001011000010110100011011101110000111011010001100010111000000010111101001100010000001010111001110001101000101100000000110000011011001101100111101100101100011110111101001110101111011010011010011111110010100111010000010010110010100110011", "l20": "100110100101101011100100111010010110010110101101001100110101011100101101001010011010111001011010010110101101001100101110100011100101101001011010110010011101001011010110100101100110101110010010110101101001011001110101001011010011010110010110110100100111010110100101100101101011100101001101011010010111", "l43": "000110100101101011100100111010010110010110101101001100110101011100101101001010011010111001011010010110101101001100101110100011100101101001011010110010011101001011010110100101100110101110010010110101101001011001110101001011010011010110010110110100100111010110100101100101101011100101001101011010010110", "l5": "010011101100101101001010110111001010011010010111011010010011001011100101101001011011010011100100101101011001101010010111001011010011010110011010010110111001001011010110100110010111010011010010110101100110100111010010110101110010011010010101101011001101001011010011101010011010010111001011011001010110"};
+function drawBits(id, s, other) {
+  const run = /0{8,}/.exec(s), hit = new Set();
+  if (!other && run) for (let i = run.index; i < run.index + run[0].length; i++) hit.add(i);
+  document.getElementById(id).innerHTML = [...s].map((b, i) =>
+    `<span class="${hit.has(i) || (other && other[i] !== b) ? 'hit' : b === '0' ? 'z' : ''}"></span>`).join('');
+}
+drawBits('llm-bits', D.l5);
+drawBits('rand-bits', D.rand);
+drawBits('l20', D.l20, D.l20);
+drawBits('l43', D.l43, D.l20);
+const NS = 'http://www.w3.org/2000/svg';
+function el(svg, tag, attrs, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  svg.appendChild(e); return e;
+}
+const pct = v => v === 0 ? '0' : v < 0.001 ? (v * 100).toFixed(2) + '%' : (v * 100).toFixed(1) + '%';
+
+// Run-length chart: exact data from the 87 lines; random is the exact 2^-L law (8+ collects the tail).
+(function () {
+  const svg = document.getElementById('runs');
+  const llm = [0.649, 0.3432, 0.0071, 0.0006, 0, 0.0001, 0, 0];
+  const rnd = [0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625, 0.0078125, 0.0078125];
+  const labels = ['1', '2', '3', '4', '5', '6', '7', '8+'];
+  const x0 = 40, w = 620, top = 24, h = 180, max = 0.7, gw = w / 8, bw = 28;
+  const y = v => top + h - (v / max) * h;
+  [0, 0.2, 0.4, 0.6].forEach(t => {
+    el(svg, 'line', { x1: x0, x2: x0 + w, y1: y(t), y2: y(t), stroke: 'var(--line)' });
+    el(svg, 'text', { x: x0 - 6, y: y(t) + 4, 'text-anchor': 'end' }, (t * 100) + '%');
+  });
+  labels.forEach((lab, i) => {
+    const cx = x0 + gw * i + gw / 2;
+    [[llm[i], 'var(--llm)', -bw - 1], [rnd[i], 'var(--rand)', 1]].forEach(([v, c, dx]) => {
+      const hh = Math.max((v / max) * h, v > 0 ? 1 : 0);
+      el(svg, 'rect', { x: cx + dx, y: top + h - hh, width: bw, height: hh, fill: c, rx: 1 });
+      el(svg, 'text', { x: cx + dx + bw / 2, y: top + h - hh - 5, 'text-anchor': 'middle', style: 'font-size:10px' }, pct(v));
+    });
+    el(svg, 'text', { x: cx, y: top + h + 18, 'text-anchor': 'middle' }, lab);
+  });
+  el(svg, 'text', { x: x0 + w / 2, y: top + h + 38, 'text-anchor': 'middle' }, 'run length (zeroes)');
+})();
+
+// Block chart: counts from run_probability.py, divided by the random expectation.
+(function () {
+  const svg = document.getElementById('blocks');
+  const rows = [['0101', 800], ['1001', 780], ['1010', 767], ['0110', 740], ['1011', 702], ['1101', 627], ['0010', 512], ['0100', 480],
+    ['1100', 305], ['1110', 263], ['0011', 260], ['0111', 246], ['1000', 24], ['0001', 16], ['1111', 2], ['0000', 1]];
+  const exp = 6525 / 16, x0 = 56, w = 560, rh = 24, top = 8, max = 2.2;
+  const x = v => x0 + (v / max) * w;
+  rows.forEach(([b, n], i) => {
+    const r = n / exp, yy = top + i * rh;
+    el(svg, 'text', { x: x0 - 8, y: yy + 15, 'text-anchor': 'end', style: 'fill:var(--fg)' }, b);
+    el(svg, 'rect', { x: x0, y: yy + 4, width: Math.max(x(r) - x0, 1.5), height: rh - 8, fill: r >= 1 ? 'var(--llm)' : 'var(--llm-soft)', rx: 1 });
+    el(svg, 'text', { x: x(r) + 6, y: yy + 15 }, r.toFixed(2) + '×  (' + n + ')');
+  });
+  const bottom = top + rows.length * rh;
+  el(svg, 'line', { x1: x(1), x2: x(1), y1: top, y2: bottom, stroke: 'var(--fg)', 'stroke-dasharray': '4 4' });
+  [0, 1, 2].forEach(t => el(svg, 'text', { x: x(t), y: bottom + 18, 'text-anchor': 'middle' }, t + '×'));
+})();
+document.getElementById('grid').innerHTML = D.cells.map(c =>
+  `<div class="${c.s}" title="Line ${c.n}${c.g ? ', group ' + c.g : ''}">${c.n}<small>${c.g}</small></div>`).join('');
+
+(function () {
+  const NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('zip');
+  const el = (tag, a, t) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (t != null) e.textContent = t; svg.appendChild(e); };
+  const rows = [['Lines 1–22', 0.094, 'var(--llm)'], ['Lines 23–44', 0.064, 'var(--llm)'], ['Lines 45–66', 0.064, 'var(--llm)'], ['Lines 67–87', 0.062, 'var(--llm)'], ['Random bits', 0.164, 'var(--rand)']];
+  const x0 = 110, w = 480, max = 0.18, rh = 34, top = 6;
+  const x = v => x0 + (v / max) * w;
+  rows.forEach(([lab, v, c], i) => {
+    const y = top + i * rh;
+    el('text', { x: x0 - 10, y: y + 20, 'text-anchor': 'end', style: 'fill:var(--fg)' }, lab);
+    el('rect', { x: x0, y: y + 7, width: x(v) - x0, height: rh - 14, fill: c, rx: 1 });
+    el('text', { x: x(v) + 6, y: y + 20 }, (v * 100).toFixed(1) + '%');
+  });
+  [0, 0.05, 0.10, 0.15].forEach(t => el('text', { x: x(t), y: top + rows.length * rh + 14, 'text-anchor': 'middle' }, Math.round(t * 100) + '%'));
+})();
+
+</script>
+</body>
+</html>
